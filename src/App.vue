@@ -1,7 +1,7 @@
 <template>
   <div class="min-h-screen bg-gray-100">
     <header class="bg-white shadow-md p-4">
-      <h1 class="text-2xl font-bold text-center text-gray-800">맛집 탐색기</h1>
+      <h1 class="text-2xl font-bold text-center text-gray-800">대기업이 추천한 맛집</h1>
     </header>
     
     <div class="container mx-auto p-4">
@@ -150,7 +150,6 @@ const filteredCities = computed(() => {
   return cities.value[selectedRegion.value] || []
 })
 
-// 맛집 데이터 (예시)
 const fetchRestaurants = (location) => {
   // 실제로는 API 호출을 통해 데이터를 가져옴
   // 여기서는 예시 데이터 사용
