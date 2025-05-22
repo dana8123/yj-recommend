@@ -168,6 +168,13 @@ const restaurants = ref([])
 const filteredRestaurants = computed(() => {
   let filtered = restaurants.value
 
+  // 초기, 선택 지역이 없는 경우, 서울이나 현재 위치를 보여줌.
+  console.log("지역 >", selectedRegion)
+  console.log("동네>", selectedCity)
+  if (!selectedRegion.value && !currentPosition) {
+    console.log("기본 데이터를 불러옵니다...")
+    filtered = filtered.filter(r => r.region === "서울특별시")
+  }
   // 지역 필터링
   if (selectedRegion.value) {
     filtered = filtered.filter(r => r.region === selectedRegion.value)
@@ -177,6 +184,10 @@ const filteredRestaurants = computed(() => {
   if (selectedCity.value) {
     filtered = filtered.filter(r => r.city === selectedCity.value)
   }
+
+  console.log("필터링된 데이터를 불러옵니다....")
+  console.log(filtered.length)
+  console.log("is loading>>>", isLoading.value)
   
   // 거리순 정렬
   return filtered.sort((a, b) => a.distance - b.distance)
@@ -185,12 +196,13 @@ const filteredRestaurants = computed(() => {
 // 지역 및 도시 목록 (API 데이터에서 추출)
 const regions = computed(() => {
   console.log("전체 지역 및 도시목록 불러오기....")
-  console.log(restaurants)
+
   const uniqueRegions = [...new Set(restaurants.value.map(r => r.region))]
-  console.log(uniqueRegions)
+
   return uniqueRegions.sort()
 })
-
+console.log("선택된 도시...")
+console.log(selectedRegion.value)
 const filteredCities = computed(() => {
   if (!selectedRegion.value) return []
   const cities = restaurants.value
@@ -290,7 +302,7 @@ const getCurrentLocation = () => {
 const loadRestaurantData = async () => {
   isLoading.value = true
   clearMarkers()
-  console.log("12121")
+  console.log("API에서 음식점 데이터를 로드합니다...")
   try {
     // 프록시 설정을 통해 상대 경로 사용
     const response = await fetch('http://localhost:8080/api/data')
@@ -303,14 +315,11 @@ const loadRestaurantData = async () => {
     // 위도, 경도 데이터가 없는 경우를 대비한 예시 데이터
     // 실제로는 DB에서 위도, 경도 데이터를 함께 가져와야 합니다
     const processedData = data.map(restaurant => {
-      if( restaurant.lat == null) {
-        console.log(restaurant.name)
-      }
-      // 가상의 위도, 경도 데이터 (실제로는 DB에서 가져와야 함)
-      // 이 부분은 백엔드에서 위도, 경도 데이터를 제공하도록 수정해야 합니다
-      const latitude = restaurant.lat || 37.5 + Math.random() * 0.1
-      const longitude = restaurant.lng || 127.0 + Math.random() * 0.1
-      
+
+      // 가상의 위도, 경도 데이터 (만약 실제 데이터가 없는 경우, 서울)
+      const latitude = restaurant.lat || 37.5665
+      const longitude = restaurant.lng || 126.9780;
+      // console.log("현재위치 --- > ", currentPosition.value.lat, currentPosition.value.lng,)
       // 현재 위치와의 거리 계산
       const distance = calculateDistance(
         currentPosition.value.lat,
@@ -318,7 +327,6 @@ const loadRestaurantData = async () => {
         latitude,
         longitude
       )
-
       
       return {
         ...restaurant,
@@ -329,17 +337,17 @@ const loadRestaurantData = async () => {
         distance
       }
     })
-    console.log(processedData)
+
     // 10km 이내의 음식점만 필터링
-    // restaurants.value = processedData.filter(r =>r.distance != null && r.distance <= 10)
-    restaurants.value = processedData
-    console.log("2222")
+    restaurants.value = processedData.filter(r =>r.distance != null && r.distance <= 10)
+    console.log("반경 10키로 이내의 데이터들")
+    console.log(restaurants.value)
     // 마커 추가
     addMarkers()
     
   } catch (error) {
     console.error('음식점 데이터를 불러오는데 실패했습니다:', error)
-  }
+  }   
 }
 
 // 마커 추가
@@ -465,14 +473,15 @@ const onCityChange = () => {
 // 거리 계산 (Haversine 공식)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const R = 6371 // 지구 반경 (km)
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLon = (lon2 - lon1) * Math.PI / 180
+  const dLat = (lat2 - lat1) * (Math.PI / 180)
+  const dLon = (lon2 - lon1) * (Math.PI / 180)
   const a = 
     Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
     Math.sin(dLon/2) * Math.sin(dLon/2)
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
   const distance = R * c
+
   return distance
 }
 
@@ -514,8 +523,9 @@ const loadGoogleMapsApi = () => {
 }
 
 // 컴포넌트 마운트 시 구글 맵 API 로드
-onMounted(() => {
+onMounted(async () => {
   console.log('컴포넌트 마운트됨')
+  await loadRestaurantData();
   // DOM이 렌더링된 후 API 로드
   nextTick(() => {
     console.log('DOM 업데이트됨, API 로드 시작')
@@ -525,7 +535,9 @@ onMounted(() => {
 
 // 필터링 변경 시 마커 업데이트
 watch([selectedRegion, selectedCity], () => {
+  filteredRestaurants;
   addMarkers()
+
 })
 </script>
 
